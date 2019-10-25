@@ -4,3 +4,9 @@ allow = [
   "Apache-2.0",
   "MIT",
 ]
+
+[bans]
+multiple-versions = "deny"
+skip = [
+  { name = "winapi", version = "=0.2.8" }, # term_size 0.3.1
+]
