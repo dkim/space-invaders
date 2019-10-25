@@ -1,0 +1,7 @@
+[package]
+name = "space-invaders"
+version = "0.1.0"
+authors = ["Deokhwan Kim"]
+edition = "2018"
+
+[dependencies]
