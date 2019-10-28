@@ -50,6 +50,11 @@ impl From<io::Error> for Error {
 /// A specialized `std::result::Result` type for this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// The width of the screen of the Space Invaders arcade machine.
+pub const SCREEN_WIDTH: u32 = 224;
+/// The height of the screen of the Space Invaders arcade machine.
+pub const SCREEN_HEIGHT: u32 = 256;
+
 /// A Space Invaders arcade machine.
 pub struct SpaceInvaders {
     /// The Intel 8080 CPU.
@@ -59,5 +64,10 @@ pub struct SpaceInvaders {
 impl SpaceInvaders {
     pub fn new<P: AsRef<Path>>(roms: &[P]) -> Result<Self> {
         Ok(Self { i8080: Intel8080::new(roms, 0)? })
+    }
+
+    /// Returns a shared reference to the framebuffer.
+    pub fn framebuffer(&self) -> &[u8] {
+        &self.i8080.memory[0x2400..0x4000]
     }
 }
