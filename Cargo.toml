@@ -8,4 +8,5 @@ readme = "README.md"
 edition = "2018"
 
 [dependencies]
+i8080 = { git = "https://github.com/dkim/i8080.git", tag = "1.0.0", default_features = false }
 structopt = { version = "0.3.8", features = ["wrap_help"] }
