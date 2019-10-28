@@ -7,3 +7,8 @@ allow = [
 
 [bans]
 multiple-versions = "deny"
+
+[sources]
+allow-git = [
+  "https://github.com/dkim/i8080",
+]

@@ -4,21 +4,14 @@ use std::{path::PathBuf, process};
 
 use structopt::StructOpt;
 
+use space_invaders::SpaceInvaders;
+
 #[derive(Debug, StructOpt)]
 #[structopt(about)]
 struct Opt {
-    /// A path to INVADERS.E
-    #[structopt(name = "INVADERS.E", parse(from_os_str))]
-    invaders_e: PathBuf,
-    /// A path to INVADERS.F
-    #[structopt(name = "INVADERS.F", parse(from_os_str))]
-    invaders_f: PathBuf,
-    /// A path to INVADERS.G
-    #[structopt(name = "INVADERS.G", parse(from_os_str))]
-    invaders_g: PathBuf,
-    /// A path to INVADERS.H
-    #[structopt(name = "INVADERS.H", parse(from_os_str))]
-    invaders_h: PathBuf,
+    /// A directory that contains invaders.{e,f,g,h}
+    #[structopt(parse(from_os_str))]
+    roms: PathBuf,
 }
 
 fn main() {
@@ -28,6 +21,12 @@ fn main() {
     }
 }
 
-fn run(_opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
+fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
+    SpaceInvaders::new(&[
+        opt.roms.join("invaders.h"),
+        opt.roms.join("invaders.g"),
+        opt.roms.join("invaders.f"),
+        opt.roms.join("invaders.e"),
+    ])?;
     Ok(())
 }
