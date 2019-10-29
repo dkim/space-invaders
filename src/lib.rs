@@ -4,6 +4,7 @@ use std::{
     fmt::{self, Display, Formatter},
     io,
     path::Path,
+    sync::mpsc::{Receiver, TryRecvError},
 };
 
 use i8080::Intel8080;
@@ -59,15 +60,27 @@ pub const SCREEN_HEIGHT: u32 = 256;
 pub struct SpaceInvaders {
     /// The Intel 8080 CPU.
     pub i8080: Intel8080,
+    interrupt_receiver: Receiver<[u8; 3]>,
 }
 
 impl SpaceInvaders {
-    pub fn new<P: AsRef<Path>>(roms: &[P]) -> Result<Self> {
-        Ok(Self { i8080: Intel8080::new(roms, 0)? })
+    pub fn new<P: AsRef<Path>>(roms: &[P], interrupt_receiver: Receiver<[u8; 3]>) -> Result<Self> {
+        Ok(Self { i8080: Intel8080::new(roms, 0)?, interrupt_receiver })
     }
 
     /// Returns a shared reference to the framebuffer.
     pub fn framebuffer(&self) -> &[u8] {
         &self.i8080.memory[0x2400..0x4000]
+    }
+
+    /// Handles a pending interrupt, if any; otherwise fetches and executes an instruction.
+    pub fn update(&mut self) -> u32 {
+        match self.interrupt_receiver.try_recv() {
+            Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => {
+                let (_instruction, states) = self.i8080.fetch_execute_instruction().unwrap();
+                states
+            }
+            Ok(instruction) => self.i8080.interrupt(instruction).unwrap_or(0),
+        }
     }
 }

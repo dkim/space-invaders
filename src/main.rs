@@ -2,8 +2,14 @@
 
 use std::{
     fmt::{self, Display, Formatter},
+    mem::MaybeUninit,
     path::PathBuf,
     process,
+    sync::{
+        mpsc::{self, SyncSender},
+        Arc, Mutex,
+    },
+    thread,
 };
 
 use luminance::{
@@ -106,6 +112,8 @@ struct Uniforms {
 const VERTEX_SHADER: &str = include_str!("vertex.vert");
 const FRAGMENT_SHADER: &str = include_str!("fragment.frag");
 
+const FRAMEBUFFER_LEN: usize =
+    space_invaders::SCREEN_HEIGHT as usize / 8 * space_invaders::SCREEN_WIDTH as usize;
 const TEXELS_LEN: usize =
     space_invaders::SCREEN_HEIGHT as usize * space_invaders::SCREEN_WIDTH as usize;
 
@@ -117,12 +125,18 @@ fn main() {
 }
 
 fn run(opt: Opt) -> Result<()> {
-    let space_invaders = SpaceInvaders::new(&[
-        opt.roms.join("invaders.h"),
-        opt.roms.join("invaders.g"),
-        opt.roms.join("invaders.f"),
-        opt.roms.join("invaders.e"),
-    ])?;
+    let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
+    let space_invaders = Arc::new(Mutex::new(SpaceInvaders::new(
+        &[
+            opt.roms.join("invaders.h"),
+            opt.roms.join("invaders.g"),
+            opt.roms.join("invaders.f"),
+            opt.roms.join("invaders.e"),
+        ],
+        interrupt_receiver,
+    )?));
+    thread::spawn(update_space_invaders(Arc::clone(&space_invaders)));
+    thread::spawn(generate_interrupts(interrupt_sender));
 
     let mut surface = GlfwSurface::new(
         WindowDim::Windowed(space_invaders::SCREEN_WIDTH * 2, space_invaders::SCREEN_HEIGHT * 2),
@@ -141,6 +155,39 @@ fn run(opt: Opt) -> Result<()> {
         loop_helper.loop_sleep();
     }
     Ok(())
+}
+
+fn update_space_invaders(space_invaders: Arc<Mutex<SpaceInvaders>>) -> impl FnOnce() {
+    move || {
+        let mut loop_helper = LoopHelper::builder().build_with_target_rate(120.0);
+        loop {
+            // 2 MHz = 2,000,000 states per second = 2 states per microsecond
+            let elapsed_states = loop_helper.loop_start().as_micros() * 2;
+            let mut states = 0;
+            while elapsed_states > states {
+                states += u128::from(space_invaders.lock().unwrap().update());
+            }
+            loop_helper.loop_sleep();
+        }
+    }
+}
+
+fn generate_interrupts(interrupt_sender: SyncSender<[u8; 3]>) -> impl FnOnce() {
+    move || {
+        let mut loop_helper = LoopHelper::builder().build_with_target_rate(120.0);
+        loop {
+            loop_helper.loop_start();
+            if interrupt_sender.send([0xCF, 0, 0] /* RST 1 */).is_err() {
+                break;
+            }
+            loop_helper.loop_sleep();
+            loop_helper.loop_start();
+            if interrupt_sender.send([0xD7, 0, 0] /* RST 2 */).is_err() {
+                break;
+            }
+            loop_helper.loop_sleep();
+        }
+    }
 }
 
 struct Graphics {
@@ -177,8 +224,20 @@ impl Graphics {
         Ok(Self { back_buffer, pipeline_state, program, render_state, vertices, texture, texels })
     }
 
-    fn render(&mut self, space_invaders: &SpaceInvaders, surface: &mut GlfwSurface) -> Result<()> {
-        framebuffer_to_texels(space_invaders.framebuffer(), &mut self.texels);
+    fn render(
+        &mut self,
+        space_invaders: &Mutex<SpaceInvaders>,
+        surface: &mut GlfwSurface,
+    ) -> Result<()> {
+        let framebuffer = unsafe {
+            let mut framebuffer = MaybeUninit::<[u8; FRAMEBUFFER_LEN]>::uninit();
+            (framebuffer.as_mut_ptr() as *mut u8).copy_from_nonoverlapping(
+                space_invaders.lock().unwrap().framebuffer() as *const [u8] as *const u8,
+                FRAMEBUFFER_LEN,
+            );
+            framebuffer.assume_init()
+        };
+        framebuffer_to_texels(&framebuffer, &mut self.texels);
         self.texture.upload_raw(GenMipmaps::No, &self.texels)?;
         surface.pipeline_builder().pipeline(
             &self.back_buffer,
