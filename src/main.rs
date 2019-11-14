@@ -23,13 +23,15 @@ use luminance::{
     texture::{Dim2, GenMipmaps, Sampler, Texture, TextureError},
 };
 use luminance_derive::UniformInterface;
-use luminance_glfw::{GlfwSurface, GlfwSurfaceError, Surface, WindowDim, WindowEvent, WindowOpt};
+use luminance_glfw::{
+    Action, GlfwSurface, GlfwSurfaceError, Key, Surface, WindowDim, WindowEvent, WindowOpt,
+};
 
 use spin_sleep::LoopHelper;
 
 use structopt::StructOpt;
 
-use space_invaders::SpaceInvaders;
+use space_invaders::{Port1, Port2, SpaceInvaders};
 
 #[derive(Debug)]
 enum Error {
@@ -148,7 +150,7 @@ fn run(opt: Opt) -> Result<()> {
     let mut loop_helper = LoopHelper::builder().build_with_target_rate(60.0);
     loop {
         loop_helper.loop_start();
-        if let Ok(false) = process_input(&mut surface, &mut graphics) {
+        if !(process_input(&mut surface, &mut graphics, &space_invaders)?) {
             break;
         }
         graphics.render(&space_invaders, &mut surface)?;
@@ -275,10 +277,89 @@ fn framebuffer_to_texels(
     });
 }
 
-fn process_input(surface: &mut GlfwSurface, graphics: &mut Graphics) -> Result<bool> {
+fn process_input(
+    surface: &mut GlfwSurface,
+    graphics: &mut Graphics,
+    space_invaders: &Mutex<SpaceInvaders>,
+) -> Result<bool> {
     let mut resized = false;
     for event in surface.poll_events() {
         match event {
+            WindowEvent::Key(Key::Left, _, action, _) => match action {
+                Action::Press => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port1.insert(Port1::PLAYER_1_LEFT);
+                    space_invaders.port2.insert(Port2::PLAYER_2_LEFT);
+                }
+                Action::Release => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port1.remove(Port1::PLAYER_1_LEFT);
+                    space_invaders.port2.remove(Port2::PLAYER_2_LEFT);
+                }
+                Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::Right, _, action, _) => match action {
+                Action::Press => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port1.insert(Port1::PLAYER_1_RIGHT);
+                    space_invaders.port2.insert(Port2::PLAYER_2_RIGHT);
+                }
+                Action::Release => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port1.remove(Port1::PLAYER_1_RIGHT);
+                    space_invaders.port2.remove(Port2::PLAYER_2_RIGHT);
+                }
+                Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::Space, _, action, _) => match action {
+                Action::Press => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port1.insert(Port1::PLAYER_1_FIRE);
+                    space_invaders.port2.insert(Port2::PLAYER_2_FIRE);
+                }
+                Action::Release => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port1.remove(Port1::PLAYER_1_FIRE);
+                    space_invaders.port2.remove(Port2::PLAYER_2_FIRE);
+                }
+                Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::C, _, action, _) => match action {
+                Action::Press => {
+                    space_invaders.lock().unwrap().port1.insert(Port1::COIN);
+                }
+                Action::Release => {
+                    space_invaders.lock().unwrap().port1.remove(Port1::COIN);
+                }
+                Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::T, _, action, _) => match action {
+                Action::Press => {
+                    space_invaders.lock().unwrap().port2.insert(Port2::TILT);
+                }
+                Action::Release => {
+                    space_invaders.lock().unwrap().port2.remove(Port2::TILT);
+                }
+                Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::Num1, _, action, _) => match action {
+                Action::Press => {
+                    space_invaders.lock().unwrap().port1.insert(Port1::PLAYER_1_START);
+                }
+                Action::Release => {
+                    space_invaders.lock().unwrap().port1.remove(Port1::PLAYER_1_START);
+                }
+                Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::Num2, _, action, _) => match action {
+                Action::Press => {
+                    space_invaders.lock().unwrap().port1.insert(Port1::PLAYER_2_START);
+                }
+                Action::Release => {
+                    space_invaders.lock().unwrap().port1.remove(Port1::PLAYER_2_START);
+                }
+                Action::Repeat => (),
+            },
             WindowEvent::FramebufferSize(_, _) => resized = true,
             WindowEvent::Close => return Ok(false),
             _ => (),
