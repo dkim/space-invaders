@@ -2,12 +2,17 @@
 
 use std::{
     fmt::{self, Display, Formatter},
-    io,
+    fs,
+    io::{self, Cursor},
     path::Path,
     sync::mpsc::{Receiver, TryRecvError},
 };
 
 use bitflags::bitflags;
+
+use log::warn;
+
+use rodio::{Decoder, Device, Sink, Source};
 
 use i8080::Intel8080;
 
@@ -67,17 +72,55 @@ pub struct SpaceInvaders {
     pub port1: Port1,
     /// Port 2.
     pub port2: Port2,
+    port3: Port3,
+    port5: Port5,
     video_shifter: VideoShifter,
+    audio_device: Option<Device>,
+    samples: Samples,
 }
 
 impl SpaceInvaders {
-    pub fn new<P: AsRef<Path>>(roms: &[P], interrupt_receiver: Receiver<[u8; 3]>) -> Result<Self> {
+    /// Constructs a new `SpaceInvaders`.
+    ///
+    /// # Arguments
+    ///
+    /// * `roms` - a reference to a slice of paths to ROMs to be loaded starting at address 0.
+    /// * `samples` - an optional array of paths to 9 audio samples.
+    /// * `interrupt_receiver` - a `std::sync::mpsc::Receiver` to receive interrupts from.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use std::sync::mpsc;
+    /// use space_invaders::SpaceInvaders;
+    ///
+    /// let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
+    /// let space_invaders = SpaceInvaders::new(
+    ///     &["invaders.h", "invaders.g", "invaders.f", "invaders.e"],
+    ///     Some([
+    ///         "1.wav", "2.wav", "3.wav", "4.wav", "5.wav", "6.wav", "7.wav", "8.wav", "9.wav",
+    ///     ]),
+    ///     interrupt_receiver,
+    /// )?;
+    /// # Ok::<(), space_invaders::Error>(())
+    /// ```
+    pub fn new<P: AsRef<Path>, Q: AsRef<Path>>(
+        roms: &[P],
+        samples: Option<[Q; 9]>,
+        interrupt_receiver: Receiver<[u8; 3]>,
+    ) -> Result<Self> {
+        let audio_device = rodio::default_output_device();
+        let samples = Samples::new(&audio_device, samples);
         Ok(Self {
             i8080: Intel8080::new(roms, 0)?,
             interrupt_receiver,
             port1: Port1::default(),
             port2: Port2::default(),
+            port3: Port3::default(),
+            port5: Port5::default(),
             video_shifter: VideoShifter::default(),
+            audio_device,
+            samples,
         })
     }
 
@@ -102,9 +145,63 @@ impl SpaceInvaders {
             // OUT port
             [0xD3, port, 0] => match port {
                 2 => self.video_shifter.offset = self.i8080.cpu.a,
-                3 => (),
+                3 => {
+                    // from_bits_unchecked() is used instead of from_bits() because the
+                    // functionalities of some bits of port 3 are not clear and they are ignored
+                    // for now.
+                    let port3 = unsafe { Port3::from_bits_unchecked(self.i8080.cpu.a) };
+                    if let Some((ref wav, ref mut sink)) = self.samples.ufo_low_pitch {
+                        if port3.contains(Port3::UFO_LOW_PITCH) {
+                            if !self.port3.contains(Port3::UFO_LOW_PITCH) {
+                                match Decoder::new(Cursor::new(wav.clone())) {
+                                    Ok(source) => sink.append(source.repeat_infinite()),
+                                    Err(err) => warn!("{:?}", err),
+                                }
+                            }
+                        } else if self.port3.contains(Port3::UFO_LOW_PITCH) {
+                            // Sink::stop() cannot be used here. Sink cannot be restarted once it
+                            // has been stopped. Refer to
+                            // https://github.com/RustAudio/rodio/issues/171.
+                            *sink = Sink::new(self.audio_device.as_ref().unwrap());
+                        }
+                    }
+                    for (audio, bit) in &mut [
+                        (&self.samples.shoot, Port3::SHOOT),
+                        (&self.samples.explosion, Port3::EXPLOSION),
+                        (&self.samples.invader_killed, Port3::INVADER_KILLED),
+                    ] {
+                        if let Some((wav, sink)) = audio {
+                            if port3.contains(*bit) && !self.port3.contains(*bit) {
+                                match Decoder::new(Cursor::new(wav.clone())) {
+                                    Ok(source) => sink.append(source),
+                                    Err(err) => warn!("{:?}", err),
+                                }
+                            }
+                        }
+                    }
+                    self.port3 = port3;
+                }
                 4 => self.video_shifter.shift_right(self.i8080.cpu.a),
-                5 => (),
+                5 => {
+                    let port5 = Port5::from_bits(self.i8080.cpu.a).unwrap();
+                    for (audio, bit) in &mut [
+                        (&self.samples.fast_invader_1, Port5::FAST_INVADER_1),
+                        (&self.samples.fast_invader_2, Port5::FAST_INVADER_2),
+                        (&self.samples.fast_invader_3, Port5::FAST_INVADER_3),
+                        (&self.samples.fast_invader_4, Port5::FAST_INVADER_4),
+                        (&self.samples.ufo_high_pitch, Port5::UFO_HIGH_PITCH),
+                    ] {
+                        if let Some((wav, sink)) = audio {
+                            if port5.contains(*bit) && !self.port5.contains(*bit) {
+                                match Decoder::new(Cursor::new(wav.clone())) {
+                                    Ok(source) => sink.append(source),
+                                    Err(err) => warn!("{:?}", err),
+                                }
+                            }
+                        }
+                    }
+                    self.port5 = port5;
+                }
                 6 => (), // watchdog
                 _ => unreachable!(),
             },
@@ -151,6 +248,28 @@ bitflags! {
     }
 }
 
+bitflags! {
+    // Some bits of port 3 are missing here because their functionalities are not clear.
+    #[derive(Default)]
+    struct Port3: u8 {
+        const UFO_LOW_PITCH = 0b0000_0001;
+        const SHOOT = 0b0000_0010;
+        const EXPLOSION = 0b0000_0100;
+        const INVADER_KILLED = 0b0000_1000;
+    }
+}
+
+bitflags! {
+    #[derive(Default)]
+    struct Port5: u8 {
+        const FAST_INVADER_1 = 0b0000_0001;
+        const FAST_INVADER_2 = 0b0000_0010;
+        const FAST_INVADER_3 = 0b0000_0100;
+        const FAST_INVADER_4 = 0b0000_1000;
+        const UFO_HIGH_PITCH = 0b0001_0000;
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 struct VideoShifter {
     register: u16,
@@ -166,5 +285,69 @@ impl VideoShifter {
 impl Into<u8> for VideoShifter {
     fn into(self) -> u8 {
         (self.register >> (8 - self.offset)) as u8
+    }
+}
+
+struct Samples {
+    ufo_low_pitch: Option<(Vec<u8>, Sink)>,
+    shoot: Option<(Vec<u8>, Sink)>,
+    explosion: Option<(Vec<u8>, Sink)>,
+    invader_killed: Option<(Vec<u8>, Sink)>,
+    fast_invader_1: Option<(Vec<u8>, Sink)>,
+    fast_invader_2: Option<(Vec<u8>, Sink)>,
+    fast_invader_3: Option<(Vec<u8>, Sink)>,
+    fast_invader_4: Option<(Vec<u8>, Sink)>,
+    ufo_high_pitch: Option<(Vec<u8>, Sink)>,
+}
+
+impl Samples {
+    fn new<P: AsRef<Path>>(audio_device: &Option<Device>, samples: Option<[P; 9]>) -> Self {
+        let mut ufo_low_pitch = None;
+        let mut shoot = None;
+        let mut explosion = None;
+        let mut invader_killed = None;
+        let mut fast_invader_1 = None;
+        let mut fast_invader_2 = None;
+        let mut fast_invader_3 = None;
+        let mut fast_invader_4 = None;
+        let mut ufo_high_pitch = None;
+        if let Some(samples) = samples {
+            if let Some(audio_device) = audio_device {
+                for (path, audio) in &mut [
+                    (&samples[0], &mut ufo_high_pitch),
+                    (&samples[1], &mut shoot),
+                    (&samples[2], &mut explosion),
+                    (&samples[3], &mut invader_killed),
+                    (&samples[4], &mut fast_invader_1),
+                    (&samples[5], &mut fast_invader_2),
+                    (&samples[6], &mut fast_invader_3),
+                    (&samples[7], &mut fast_invader_4),
+                    (&samples[8], &mut ufo_low_pitch),
+                ] {
+                    let path = path.as_ref();
+                    match fs::read(path) {
+                        Ok(wav) => **audio = Some((wav, Sink::new(audio_device))),
+                        Err(err) => {
+                            if let io::ErrorKind::NotFound = err.kind() {
+                                warn!("{:?}: '{}'", err, path.display());
+                            } else {
+                                warn!("{:?}", err);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Self {
+            ufo_low_pitch,
+            shoot,
+            explosion,
+            invader_killed,
+            fast_invader_1,
+            fast_invader_2,
+            fast_invader_3,
+            fast_invader_4,
+            ufo_high_pitch,
+        }
     }
 }
