@@ -12,6 +12,8 @@ use std::{
     thread,
 };
 
+use env_logger;
+
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
@@ -104,6 +106,10 @@ struct Opt {
     /// A directory that contains invaders.{e,f,g,h}
     #[structopt(parse(from_os_str))]
     roms: PathBuf,
+
+    /// A directory that contains {0..8}.wav
+    #[structopt(parse(from_os_str))]
+    samples: Option<PathBuf>,
 }
 
 #[derive(UniformInterface)]
@@ -127,6 +133,8 @@ fn main() {
 }
 
 fn run(opt: Opt) -> Result<()> {
+    env_logger::init();
+
     let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
     let space_invaders = Arc::new(Mutex::new(SpaceInvaders::new(
         &[
@@ -135,6 +143,19 @@ fn run(opt: Opt) -> Result<()> {
             opt.roms.join("invaders.f"),
             opt.roms.join("invaders.e"),
         ],
+        opt.samples.map(|samples| {
+            [
+                samples.join("0.wav"),
+                samples.join("1.wav"),
+                samples.join("2.wav"),
+                samples.join("3.wav"),
+                samples.join("4.wav"),
+                samples.join("5.wav"),
+                samples.join("6.wav"),
+                samples.join("7.wav"),
+                samples.join("8.wav"),
+            ]
+        }),
         interrupt_receiver,
     )?));
     thread::spawn(update_space_invaders(Arc::clone(&space_invaders)));
