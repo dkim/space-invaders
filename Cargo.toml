@@ -13,5 +13,6 @@ i8080 = { git = "https://github.com/dkim/i8080.git", tag = "1.0.0" }
 luminance = "0.39.0"
 luminance-derive = "0.5.3"
 luminance-glfw = "0.12.2"
+rodio = { version = "0.11.0", default-features = false, features = ["wav"] }
 spin_sleep = "1.0.0"
 structopt = { version = "0.3.14", features = ["wrap_help"] }
