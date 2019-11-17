@@ -3,6 +3,7 @@ confidence-threshold = 1.0
 allow = [
   "Apache-2.0",
   "BSD-3-Clause",
+  "ISC",
   "MIT",
   "Zlib",
 ]
@@ -10,6 +11,7 @@ allow = [
 [bans]
 multiple-versions = "deny"
 skip = [
+  { name = "version_check", version = "=0.1.5" }, # cexpr 0.3.6
   { name = "winapi", version = "=0.2.8" }, # term_size 0.3.1
 ]
 
