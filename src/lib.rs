@@ -242,9 +242,11 @@ bitflags! {
     #[derive(Default)]
     pub struct Port2: u8 {
         const TILT = 0b0000_0100;
+        const EXTRA_LIFE_AT = 0b0000_1000;
         const PLAYER_2_FIRE = 0b0001_0000;
         const PLAYER_2_LEFT = 0b0010_0000;
         const PLAYER_2_RIGHT = 0b0100_0000;
+        const PRICING_DISPLAY = 0b1000_0000;
     }
 }
 
