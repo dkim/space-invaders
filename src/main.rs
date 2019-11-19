@@ -12,6 +12,8 @@ use std::{
     thread,
 };
 
+use log::info;
+
 use luminance::{
     context::GraphicsContext,
     framebuffer::Framebuffer,
@@ -378,6 +380,46 @@ fn process_input(
                     space_invaders.lock().unwrap().port1.remove(Port1::PLAYER_2_START);
                 }
                 Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::F1, _, action, _) => match action {
+                Action::Press => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    let mut bits = space_invaders.port2.bits();
+                    bits = (bits & 0b1111_1100) | (((bits & 0b0000_0011) + 1) % 4);
+                    space_invaders.port2 = unsafe { Port2::from_bits_unchecked(bits) };
+                    match space_invaders.port2.bits() & 0b0000_0011 {
+                        0 => info!("num of lives: 3"),
+                        1 => info!("num of lives: 4"),
+                        2 => info!("num of lives: 5"),
+                        3 => info!("num of lives: 6"),
+                        _ => unreachable!(),
+                    }
+                }
+                Action::Release | Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::F2, _, action, _) => match action {
+                Action::Press => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port2.toggle(Port2::EXTRA_LIFE_AT);
+                    if space_invaders.port2.contains(Port2::EXTRA_LIFE_AT) {
+                        info!("extra life at: 1000 points");
+                    } else {
+                        info!("extra life at: 1500 points");
+                    }
+                }
+                Action::Release | Action::Repeat => (),
+            },
+            WindowEvent::Key(Key::F3, _, action, _) => match action {
+                Action::Press => {
+                    let mut space_invaders = space_invaders.lock().unwrap();
+                    space_invaders.port2.toggle(Port2::PRICING_DISPLAY);
+                    if space_invaders.port2.contains(Port2::PRICING_DISPLAY) {
+                        info!("pricing display: off");
+                    } else {
+                        info!("pricing display: on");
+                    }
+                }
+                Action::Release | Action::Repeat => (),
             },
             WindowEvent::FramebufferSize(_, _) => resized = true,
             WindowEvent::Close => return Ok(false),
