@@ -7,6 +7,9 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 edition = "2018"
 
+[badges]
+github-actions = { repository = "dkim/space-invaders", workflow = "build" }
+
 [dependencies]
 bitflags = "1.2.1"
 env_logger = "0.7.1"

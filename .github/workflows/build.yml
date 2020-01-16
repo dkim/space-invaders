@@ -1,0 +1,93 @@
+name: build
+
+on:
+  pull_request:
+    branches:
+    - '**'
+  push:
+    branches-ignore:
+    - staging.tmp
+    - trying.tmp
+  schedule:
+    - cron: '0 4 1 * *' # at 04:00 UTC on the first day of each month
+
+jobs:
+  cargo-test-ubuntu:
+    name: cargo test (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: Install ALSA and X11 development libraries
+      run: |
+        sudo apt-get update --assume-yes --quiet --quiet
+        sudo apt-get install --assume-yes --quiet --quiet --no-install-recommends libasound2-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev
+    - name: cargo test (all-targets)
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --workspace --all-targets -- -Z unstable-options --include-ignored
+    # `cargo test --all-targets` does not run doctest: https://github.com/rust-lang/cargo/issues/6669.
+    - name: cargo test (doc)
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --workspace --doc
+
+  cargo-test:
+    name: cargo test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macOS-latest, windows-latest]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: cargo test (all-targets)
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --workspace --all-targets -- -Z unstable-options --include-ignored
+    # `cargo test --all-targets` does not run doctest: https://github.com/rust-lang/cargo/issues/6669.
+    - name: cargo test (doc)
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --workspace --doc
+
+  cargo-fmt-clippy:
+    name: cargo fmt/clippy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        components: rustfmt, clippy
+        override: true
+    - name: cargo fmt
+      uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --verbose --all -- --check --verbose
+    - name: Install ALSA and X11 development libraries
+      run: |
+        sudo apt-get update --assume-yes --quiet --quiet
+        sudo apt-get install --assume-yes --quiet --quiet --no-install-recommends libasound2-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev
+    - name: cargo clippy
+      uses: actions-rs/cargo@v1
+      with:
+        command: clippy
+        args: --verbose --workspace --all-targets -- --warn rust_2018_idioms --deny warnings
