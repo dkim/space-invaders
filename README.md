@@ -86,7 +86,7 @@ $ cargo build --release
 
 ```console
 $ cargo run --release -- --help
-space-invaders 0.1.0
+space-invaders 1.0.0
 space-invaders is an emulator for the Space Invaders arcade machine.
 
 USAGE:
