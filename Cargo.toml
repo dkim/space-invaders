@@ -5,6 +5,9 @@ authors = ["Deokhwan Kim"]
 description = "space-invaders is an emulator for the Space Invaders arcade machine."
 license = "MIT OR Apache-2.0"
 readme = "README.md"
+repository = "https://github.com/dkim/space-invaders"
+keywords = ["space-invaders", "opengl", "luminance"]
+categories = ["emulators"]
 edition = "2018"
 
 [dependencies]
