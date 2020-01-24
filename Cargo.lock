@@ -286,7 +286,7 @@ dependencies = [
 [[package]]
 name = "i8080"
 version = "1.0.0"
-source = "git+https://github.com/dkim/i8080.git?tag=1.0.0#c1b54842a158f11dad0c6097f36f1f15c55f8f8a"
+source = "git+https://github.com/dkim/i8080.git?tag=1.0.0#44db296fe0ad9a5ef4b464e9b095c1bf83dc9d3a"
 dependencies = [
  "backtrace 0.3.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
