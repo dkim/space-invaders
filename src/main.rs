@@ -14,20 +14,20 @@ use std::{
 
 use log::info;
 
-use luminance::{
+use glfw::{Action, Context, Key, WindowEvent};
+use luminance_derive::UniformInterface;
+use luminance_front::{
     context::GraphicsContext,
-    framebuffer::Framebuffer,
-    pipeline::{BoundTexture, PipelineState},
+    framebuffer::{Framebuffer, FramebufferError},
+    pipeline::{PipelineError, PipelineState, TextureBinding},
     pixel::{NormR8UI, NormUnsigned, Pixel},
     render_state::RenderState,
-    shader::program::{BuiltProgram, Program, ProgramError, Uniform},
+    shader::{BuiltProgram, Program, ProgramError, Uniform},
     tess::{Mode, Tess, TessBuilder, TessError},
     texture::{Dim2, GenMipmaps, Sampler, Texture, TextureError},
 };
-use luminance_derive::UniformInterface;
-use luminance_glfw::{
-    Action, GlfwSurface, GlfwSurfaceError, Key, Surface, WindowDim, WindowEvent, WindowOpt,
-};
+use luminance_glfw::{GlfwSurface, GlfwSurfaceError};
+use luminance_windowing::{WindowDim, WindowOpt};
 
 use spin_sleep::LoopHelper;
 
@@ -37,7 +37,9 @@ use space_invaders::{Port1, Port2, SpaceInvaders};
 
 #[derive(Debug)]
 enum Error {
+    Framebuffer(FramebufferError),
     GlfwSurface(GlfwSurfaceError),
+    Pipeline(PipelineError),
     Program(ProgramError),
     SpaceInvaders { source: space_invaders::Error },
     Tess(TessError),
@@ -47,7 +49,9 @@ enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
+            Error::Framebuffer(e) => e.fmt(f),
             Error::GlfwSurface(e) => e.fmt(f),
+            Error::Pipeline(e) => e.fmt(f),
             Error::Program(e) => e.fmt(f),
             Error::SpaceInvaders { source } => source.fmt(f),
             Error::Tess(e) => write!(f, "{:?}", e),
@@ -59,7 +63,9 @@ impl Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            Error::Framebuffer(_) => None,
             Error::GlfwSurface(_) => None,
+            Error::Pipeline(_) => None,
             Error::Program(_) => None,
             Error::SpaceInvaders { source } => Some(source),
             Error::Tess(_) => None,
@@ -68,9 +74,21 @@ impl std::error::Error for Error {
     }
 }
 
+impl From<FramebufferError> for Error {
+    fn from(e: FramebufferError) -> Self {
+        Error::Framebuffer(e)
+    }
+}
+
 impl From<GlfwSurfaceError> for Error {
     fn from(e: GlfwSurfaceError) -> Self {
         Error::GlfwSurface(e)
+    }
+}
+
+impl From<PipelineError> for Error {
+    fn from(e: PipelineError) -> Self {
+        Error::Pipeline(e)
     }
 }
 
@@ -114,7 +132,7 @@ struct Opt {
 
 #[derive(UniformInterface)]
 struct Uniforms {
-    sampler: Uniform<&'static BoundTexture<'static, Dim2, NormUnsigned>>,
+    sampler: Uniform<TextureBinding<Dim2, NormUnsigned>>,
 }
 
 const VERTEX_SHADER: &str = include_str!("vertex.vert");
@@ -161,10 +179,12 @@ fn run(opt: Opt) -> Result<()> {
     thread::spawn(update_space_invaders(Arc::clone(&space_invaders)));
     thread::spawn(generate_interrupts(interrupt_sender));
 
-    let mut surface = GlfwSurface::new(
-        WindowDim::Windowed(space_invaders::SCREEN_WIDTH * 2, space_invaders::SCREEN_HEIGHT * 2),
+    let mut surface = GlfwSurface::new_gl33(
         "Space Invaders",
-        WindowOpt::default(),
+        WindowOpt::default().set_dim(WindowDim::Windowed {
+            width: space_invaders::SCREEN_WIDTH * 2,
+            height: space_invaders::SCREEN_HEIGHT * 2,
+        }),
     )?;
     let mut graphics = Graphics::new(&mut surface)?;
 
@@ -218,7 +238,7 @@ struct Graphics {
     pipeline_state: PipelineState,
     program: Program<(), (), Uniforms>,
     render_state: RenderState,
-    vertices: Tess,
+    vertices: Tess<()>,
     texture: Texture<Dim2, NormR8UI>,
     texels: [<NormR8UI as Pixel>::Encoding; TEXELS_LEN],
 }
@@ -227,12 +247,13 @@ impl Graphics {
     fn new(surface: &mut GlfwSurface) -> Result<Self> {
         let back_buffer = surface.back_buffer()?;
         let pipeline_state = PipelineState::default().enable_clear_depth(false);
-        let BuiltProgram { program, warnings } = Program::<(), (), Uniforms>::from_strings(
-            None, // tessellation shaders
-            VERTEX_SHADER,
-            None, // geometry shader
-            FRAGMENT_SHADER,
-        )?;
+        let BuiltProgram { program, warnings } =
+            surface.new_shader_program::<(), (), Uniforms>().from_strings(
+                VERTEX_SHADER,
+                None, // tessellation shaders
+                None, // geometry shader
+                FRAGMENT_SHADER,
+            )?;
         assert!(warnings.is_empty(), "{:?}", warnings);
         let render_state = RenderState::default().set_depth_test(None);
         let vertices =
@@ -252,6 +273,16 @@ impl Graphics {
         space_invaders: &Mutex<SpaceInvaders>,
         surface: &mut GlfwSurface,
     ) -> Result<()> {
+        let Graphics {
+            back_buffer,
+            pipeline_state,
+            program,
+            render_state,
+            vertices,
+            texture,
+            texels,
+        } = self;
+
         let framebuffer = unsafe {
             let mut framebuffer = MaybeUninit::<[u8; FRAMEBUFFER_LEN]>::uninit();
             (framebuffer.as_mut_ptr() as *mut u8).copy_from_nonoverlapping(
@@ -260,22 +291,20 @@ impl Graphics {
             );
             framebuffer.assume_init()
         };
-        framebuffer_to_texels(&framebuffer, &mut self.texels);
-        self.texture.upload_raw(GenMipmaps::No, &self.texels)?;
-        surface.pipeline_builder().pipeline(
-            &self.back_buffer,
-            &self.pipeline_state,
-            |pipeline, mut shading_gate| {
-                let bound_texture = pipeline.bind_texture(&self.texture);
-                shading_gate.shade(&self.program, |program_interface, mut render_gate| {
-                    program_interface.sampler.update(&bound_texture);
-                    render_gate.render(&self.render_state, |mut tess_gate| {
-                        tess_gate.render(&self.vertices);
-                    })
+        framebuffer_to_texels(&framebuffer, texels);
+        texture.upload_raw(GenMipmaps::No, texels)?;
+        surface
+            .new_pipeline_gate()
+            .pipeline(back_buffer, pipeline_state, |pipeline, mut shading_gate| {
+                let bound_texture = pipeline.bind_texture(texture)?;
+                shading_gate.shade(program, |mut program_interface, uniforms, mut render_gate| {
+                    program_interface.set(&uniforms.sampler, bound_texture.binding());
+                    render_gate.render(render_state, |mut tess_gate| tess_gate.render(&*vertices))
                 })
-            },
-        );
-        surface.swap_buffers();
+            })
+            .assume()
+            .into_result()?;
+        surface.window.swap_buffers();
         Ok(())
     }
 }
@@ -304,7 +333,8 @@ fn process_input(
     space_invaders: &Mutex<SpaceInvaders>,
 ) -> Result<bool> {
     let mut resized = false;
-    for event in surface.poll_events() {
+    surface.window.glfw.poll_events();
+    for (_, event) in surface.events_rx.try_iter() {
         match event {
             WindowEvent::Key(Key::Left, _, action, _) => match action {
                 Action::Press => {
