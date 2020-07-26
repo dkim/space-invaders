@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Simplify error handling in `main.rs` with `Box<dyn std::error::Error>`.
 - Upgrade `luminance` to version 0.41.0.
 
 ## [1.0.0] - 2020-07-26

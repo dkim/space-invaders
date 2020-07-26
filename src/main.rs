@@ -1,7 +1,6 @@
 #![warn(rust_2018_idioms)]
 
 use std::{
-    fmt::{self, Display, Formatter},
     mem::MaybeUninit,
     path::PathBuf,
     process,
@@ -19,14 +18,14 @@ use luminance_derive::UniformInterface;
 use luminance_front::{
     context::GraphicsContext,
     framebuffer::{Framebuffer, FramebufferError},
-    pipeline::{PipelineError, PipelineState, TextureBinding},
+    pipeline::{PipelineState, TextureBinding},
     pixel::{NormR8UI, NormUnsigned, Pixel},
     render_state::RenderState,
-    shader::{BuiltProgram, Program, ProgramError, Uniform},
-    tess::{Mode, Tess, TessBuilder, TessError},
-    texture::{Dim2, GenMipmaps, Sampler, Texture, TextureError},
+    shader::{BuiltProgram, Program, Uniform},
+    tess::{Mode, Tess, TessBuilder},
+    texture::{Dim2, GenMipmaps, Sampler, Texture},
 };
-use luminance_glfw::{GlfwSurface, GlfwSurfaceError};
+use luminance_glfw::GlfwSurface;
 use luminance_windowing::{WindowDim, WindowOpt};
 
 use spin_sleep::LoopHelper;
@@ -34,89 +33,6 @@ use spin_sleep::LoopHelper;
 use structopt::StructOpt;
 
 use space_invaders::{Port1, Port2, SpaceInvaders};
-
-#[derive(Debug)]
-enum Error {
-    Framebuffer(FramebufferError),
-    GlfwSurface(GlfwSurfaceError),
-    Pipeline(PipelineError),
-    Program(ProgramError),
-    SpaceInvaders { source: space_invaders::Error },
-    Tess(TessError),
-    Texture(TextureError),
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::Framebuffer(e) => e.fmt(f),
-            Error::GlfwSurface(e) => e.fmt(f),
-            Error::Pipeline(e) => e.fmt(f),
-            Error::Program(e) => e.fmt(f),
-            Error::SpaceInvaders { source } => source.fmt(f),
-            Error::Tess(e) => write!(f, "{:?}", e),
-            Error::Texture(e) => e.fmt(f),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Error::Framebuffer(_) => None,
-            Error::GlfwSurface(_) => None,
-            Error::Pipeline(_) => None,
-            Error::Program(_) => None,
-            Error::SpaceInvaders { source } => Some(source),
-            Error::Tess(_) => None,
-            Error::Texture(_) => None,
-        }
-    }
-}
-
-impl From<FramebufferError> for Error {
-    fn from(e: FramebufferError) -> Self {
-        Error::Framebuffer(e)
-    }
-}
-
-impl From<GlfwSurfaceError> for Error {
-    fn from(e: GlfwSurfaceError) -> Self {
-        Error::GlfwSurface(e)
-    }
-}
-
-impl From<PipelineError> for Error {
-    fn from(e: PipelineError) -> Self {
-        Error::Pipeline(e)
-    }
-}
-
-impl From<ProgramError> for Error {
-    fn from(e: ProgramError) -> Self {
-        Error::Program(e)
-    }
-}
-
-impl From<space_invaders::Error> for Error {
-    fn from(source: space_invaders::Error) -> Self {
-        Error::SpaceInvaders { source }
-    }
-}
-
-impl From<TessError> for Error {
-    fn from(e: TessError) -> Self {
-        Error::Tess(e)
-    }
-}
-
-impl From<TextureError> for Error {
-    fn from(e: TextureError) -> Self {
-        Error::Texture(e)
-    }
-}
-
-type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug, StructOpt)]
 #[structopt(about)]
@@ -150,7 +66,7 @@ fn main() {
     }
 }
 
-fn run(opt: Opt) -> Result<()> {
+fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
     let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
@@ -244,7 +160,7 @@ struct Graphics {
 }
 
 impl Graphics {
-    fn new(surface: &mut GlfwSurface) -> Result<Self> {
+    fn new(surface: &mut GlfwSurface) -> Result<Self, Box<dyn std::error::Error>> {
         let back_buffer = surface.back_buffer()?;
         let pipeline_state = PipelineState::default().enable_clear_depth(false);
         let BuiltProgram { program, warnings } =
@@ -272,7 +188,7 @@ impl Graphics {
         &mut self,
         space_invaders: &Mutex<SpaceInvaders>,
         surface: &mut GlfwSurface,
-    ) -> Result<()> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let Graphics {
             back_buffer,
             pipeline_state,
@@ -331,7 +247,7 @@ fn process_input(
     surface: &mut GlfwSurface,
     graphics: &mut Graphics,
     space_invaders: &Mutex<SpaceInvaders>,
-) -> Result<bool> {
+) -> Result<bool, FramebufferError> {
     let mut resized = false;
     surface.window.glfw.poll_events();
     for (_, event) in surface.events_rx.try_iter() {
