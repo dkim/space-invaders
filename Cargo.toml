@@ -1,6 +1,6 @@
 [package]
 name = "space-invaders"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Deokhwan Kim"]
 description = "space-invaders is an emulator for the Space Invaders arcade machine."
 license = "MIT OR Apache-2.0"
@@ -23,4 +23,4 @@ luminance-glfw = "0.13.1"
 luminance-windowing = "0.9.1"
 rodio = { version = "0.11.0", default-features = false, features = ["wav"] }
 spin_sleep = "1.0.0"
-structopt = { version = "0.3.15", features = ["wrap_help"] }
+structopt = { version = "0.3.16", features = ["wrap_help"] }

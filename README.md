@@ -11,7 +11,7 @@ arcade machine.
 
 ## Installation Requirements
 
-This program targets the latest stable version of Rust 1.40.0 or later.
+This program targets the latest stable version of Rust 1.45.2 or later.
 
 ### Requirements for Linux Systems
 
@@ -86,7 +86,7 @@ $ cargo build --release
 
 ```console
 $ cargo run --release -- --help
-space-invaders 1.0.0
+space-invaders 1.1.0
 space-invaders is an emulator for the Space Invaders arcade machine.
 
 USAGE:
