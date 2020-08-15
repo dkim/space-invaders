@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2020-08-15
+
 ### Changed
 
 - Simplify error handling in `main.rs` with `Box<dyn std::error::Error>`.
@@ -14,5 +16,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2020-07-26
 
-[Unreleased]: https://github.com/dkim/space-invaders/compare/1.0.0...HEAD
+[Unreleased]: https://github.com/dkim/space-invaders/compare/1.1.0...HEAD
+[1.1.0]: https://github.com/dkim/space-invaders/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/dkim/space-invaders/releases/tag/1.0.0
