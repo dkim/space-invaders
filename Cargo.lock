@@ -310,8 +310,8 @@ dependencies = [
 
 [[package]]
 name = "i8080"
-version = "1.0.0"
-source = "git+https://github.com/dkim/i8080?tag=1.0.0#5549456b8b69ddc3af387cde76349e1fdc443761"
+version = "1.0.1"
+source = "git+https://github.com/dkim/i8080?tag=1.0.1#bc5d9b0bc710faf57327a2f46c9501815a255df9"
 dependencies = [
  "backtrace",
  "bitflags",
