@@ -246,13 +246,12 @@ dependencies = [
 
 [[package]]
 name = "glfw"
-version = "0.39.1"
+version = "0.40.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26b0c94d75430f0e8f0359c3f669c89b79df6c291f999596fb07e536b41c050"
+checksum = "985f851b0d032911e199f308689d25c71f79d12c44625c3a31b683ad4e4f5dd9"
 dependencies = [
  "bitflags",
  "glfw-sys",
- "libc",
  "log",
  "objc",
  "raw-window-handle",
@@ -371,9 +370,9 @@ dependencies = [
 
 [[package]]
 name = "luminance"
-version = "0.41.0"
+version = "0.42.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdde9a32c24a02e8b10a34787f24c42bcf1516e0be53556c3d7545297fb38f01"
+checksum = "6b709a57d377a379d4f241becccc16215fe0b6379327cdabc7418087f3197794"
 
 [[package]]
 name = "luminance-derive"
@@ -388,9 +387,9 @@ dependencies = [
 
 [[package]]
 name = "luminance-front"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a497514e609ef806f0048683a3bb0e4f4d1a9183cb583d0ae83cf94a973e2b8"
+checksum = "754bcddee8c3744aa2e8367e083a5196dd6a4d18275bf09503ab269b11aef774"
 dependencies = [
  "luminance",
  "luminance-gl",
@@ -399,9 +398,9 @@ dependencies = [
 
 [[package]]
 name = "luminance-gl"
-version = "0.14.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44c8439470a3af537d7f8c399be6743e8a4db4f9df23eb8cd0915d9bb8070427"
+checksum = "cb4b6ddc4f46ce418d0a6b7c39c475db9c238b8fecf5087d83a763a9f00944d0"
 dependencies = [
  "gl",
  "luminance",
@@ -409,9 +408,9 @@ dependencies = [
 
 [[package]]
 name = "luminance-glfw"
-version = "0.13.1"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38f015a35ce92994ca09d22d512b173ecb98f64798f46b971be69d7c2deac4aa"
+checksum = "f6f73c3e27cfdc20a9d470073592ecfea0dbaf853ab1c2179ed2a739e8d575ec"
 dependencies = [
  "gl",
  "glfw",
@@ -422,9 +421,9 @@ dependencies = [
 
 [[package]]
 name = "luminance-webgl"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dad55eaa3dbb0f49939ebe966cfb654880725d4ed05b39c906d94b1618709737"
+checksum = "866e5d3bc396ce203db1804af97014514a90a9c8c8591e45b690a05c77cdd4ad"
 dependencies = [
  "js-sys",
  "luminance",
