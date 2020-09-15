@@ -370,9 +370,9 @@ dependencies = [
 
 [[package]]
 name = "luminance"
-version = "0.42.0"
+version = "0.42.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b709a57d377a379d4f241becccc16215fe0b6379327cdabc7418087f3197794"
+checksum = "197dba76d6bce43595879aa6509dd0499cc8659ad230fcd7f3d753ccdfb318ec"
 
 [[package]]
 name = "luminance-derive"
