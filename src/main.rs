@@ -225,12 +225,14 @@ impl Graphics {
     }
 }
 
-fn framebuffer_to_texels(
-    framebuffer: &[u8],
-    texels: &mut [<NormR8UI as Pixel>::Encoding; TEXELS_LEN],
-) {
-    framebuffer.iter().enumerate().for_each(|(i, byte)| {
-        texels[i * 8..(i + 1) * 8].copy_from_slice(&[
+const BYTE_TO_TEXELS: [[u8; 8]; 256] = byte_to_texels();
+
+const fn byte_to_texels() -> [[u8; 8]; 256] {
+    let mut mapping = [[0; 8]; 256];
+    let mut i = 0;
+    while i < 256 {
+        let byte = i as u8;
+        mapping[i] = [
             if byte & 0x01 > 0 { 0xFF } else { 0x00 },
             if byte & 0x02 > 0 { 0xFF } else { 0x00 },
             if byte & 0x04 > 0 { 0xFF } else { 0x00 },
@@ -239,7 +241,18 @@ fn framebuffer_to_texels(
             if byte & 0x20 > 0 { 0xFF } else { 0x00 },
             if byte & 0x40 > 0 { 0xFF } else { 0x00 },
             if byte & 0x80 > 0 { 0xFF } else { 0x00 },
-        ]);
+        ];
+        i += 1;
+    }
+    mapping
+}
+
+fn framebuffer_to_texels(
+    framebuffer: &[u8],
+    texels: &mut [<NormR8UI as Pixel>::Encoding; TEXELS_LEN],
+) {
+    framebuffer.iter().enumerate().for_each(|(i, &byte)| {
+        texels[i * 8..(i + 1) * 8].copy_from_slice(&BYTE_TO_TEXELS[usize::from(byte)]);
     });
 }
 

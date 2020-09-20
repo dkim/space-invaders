@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Construct a mapping table from bytes to texels at compile time.
+
 ## [1.1.0] - 2020-08-15
 
 ### Changed
