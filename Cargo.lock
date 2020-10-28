@@ -376,9 +376,9 @@ checksum = "197dba76d6bce43595879aa6509dd0499cc8659ad230fcd7f3d753ccdfb318ec"
 
 [[package]]
 name = "luminance-derive"
-version = "0.6.2"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a81163c4bbc31b829b36d7787f2c15ed63bac6baefd5b00a33fc0d12b5b683f"
+checksum = "bdd6b8d5743d7d434bda65a0657d699051aba986af7a9eebadff382f399f1c52"
 dependencies = [
  "proc-macro2",
  "quote",
