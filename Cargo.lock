@@ -387,9 +387,9 @@ dependencies = [
 
 [[package]]
 name = "luminance-front"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "754bcddee8c3744aa2e8367e083a5196dd6a4d18275bf09503ab269b11aef774"
+checksum = "cbace1b1fc1d85014a43c388f0c36fe1b15152cd7c25e2a6f085dbb3d11c7dd6"
 dependencies = [
  "luminance",
  "luminance-gl",
