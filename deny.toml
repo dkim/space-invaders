@@ -10,6 +10,9 @@ allow = [
 
 [bans]
 multiple-versions = "deny"
+skip = [
+    { name = "cfg-if", version = "0.1.10" },
+]
 
 [sources]
 allow-git = [
