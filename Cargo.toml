@@ -23,4 +23,4 @@ luminance-glfw = "0.14.4"
 luminance-windowing = "0.9.3"
 rodio = { version = "0.11.0", default-features = false, features = ["wav"] }
 spin_sleep = "1.0.0"
-structopt = { version = "0.3.16", features = ["wrap_help"] }
+structopt = { version = "0.3.21", features = ["wrap_help"] }
