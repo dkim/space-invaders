@@ -284,9 +284,9 @@ impl VideoShifter {
     }
 }
 
-impl Into<u8> for VideoShifter {
-    fn into(self) -> u8 {
-        (self.register >> (8 - self.offset)) as u8
+impl From<VideoShifter> for u8 {
+    fn from(video_shifter: VideoShifter) -> Self {
+        (video_shifter.register >> (8 - video_shifter.offset)) as u8
     }
 }
 
