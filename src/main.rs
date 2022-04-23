@@ -22,10 +22,10 @@ use luminance_front::{
     pixel::{NormR8UI, NormUnsigned, Pixel},
     render_state::RenderState,
     shader::{BuiltProgram, Program, Uniform},
-    tess::{Mode, Tess, TessBuilder},
+    tess::{Mode, Tess},
     texture::{Dim2, GenMipmaps, Sampler, Texture},
 };
-use luminance_glfw::GlfwSurface;
+use luminance_glfw::{GL33Context, GlfwSurface};
 use luminance_windowing::{WindowDim, WindowOpt};
 
 use spin_sleep::LoopHelper;
@@ -102,7 +102,7 @@ fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
             height: space_invaders::SCREEN_HEIGHT * 2,
         }),
     )?;
-    let mut graphics = Graphics::new(&mut surface)?;
+    let mut graphics = Graphics::new(&mut surface.context)?;
 
     let mut loop_helper = LoopHelper::builder().build_with_target_rate(60.0);
     loop {
@@ -110,7 +110,7 @@ fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
         if !(process_input(&mut surface, &mut graphics, &space_invaders)?) {
             break;
         }
-        graphics.render(&space_invaders, &mut surface)?;
+        graphics.render(&space_invaders, &mut surface.context)?;
         loop_helper.loop_sleep();
     }
     Ok(())
@@ -160,11 +160,11 @@ struct Graphics {
 }
 
 impl Graphics {
-    fn new(surface: &mut GlfwSurface) -> Result<Self, Box<dyn std::error::Error>> {
-        let back_buffer = surface.back_buffer()?;
+    fn new(context: &mut GL33Context) -> Result<Self, Box<dyn std::error::Error>> {
+        let back_buffer = context.back_buffer()?;
         let pipeline_state = PipelineState::default().enable_clear_depth(false);
         let BuiltProgram { program, warnings } =
-            surface.new_shader_program::<(), (), Uniforms>().from_strings(
+            context.new_shader_program::<(), (), Uniforms>().from_strings(
                 VERTEX_SHADER,
                 None, // tessellation shaders
                 None, // geometry shader
@@ -173,9 +173,8 @@ impl Graphics {
         assert!(warnings.is_empty(), "{:?}", warnings);
         let render_state = RenderState::default().set_depth_test(None);
         let vertices =
-            TessBuilder::new(surface).set_vertex_nb(4).set_mode(Mode::TriangleFan).build()?;
-        let texture = Texture::<Dim2, NormR8UI>::new(
-            surface,
+            context.new_tess().set_render_vertex_nb(4).set_mode(Mode::TriangleFan).build()?;
+        let texture = context.new_texture_no_texels(
             [space_invaders::SCREEN_HEIGHT, space_invaders::SCREEN_WIDTH],
             0, // mipmaps
             Sampler::default(),
@@ -187,7 +186,7 @@ impl Graphics {
     fn render(
         &mut self,
         space_invaders: &Mutex<SpaceInvaders>,
-        surface: &mut GlfwSurface,
+        context: &mut GL33Context,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let Graphics {
             back_buffer,
@@ -209,7 +208,7 @@ impl Graphics {
         };
         framebuffer_to_texels(&framebuffer, texels);
         texture.upload_raw(GenMipmaps::No, texels)?;
-        surface
+        context
             .new_pipeline_gate()
             .pipeline(back_buffer, pipeline_state, |pipeline, mut shading_gate| {
                 let bound_texture = pipeline.bind_texture(texture)?;
@@ -220,7 +219,7 @@ impl Graphics {
             })
             .assume()
             .into_result()?;
-        surface.window.swap_buffers();
+        context.window.swap_buffers();
         Ok(())
     }
 }
@@ -262,7 +261,7 @@ fn process_input(
     space_invaders: &Mutex<SpaceInvaders>,
 ) -> Result<bool, FramebufferError> {
     let mut resized = false;
-    surface.window.glfw.poll_events();
+    surface.context.window.glfw.poll_events();
     for (_, event) in surface.events_rx.try_iter() {
         match event {
             WindowEvent::Key(Key::Left, _, action, _) => match action {
@@ -386,7 +385,7 @@ fn process_input(
         }
     }
     if resized {
-        graphics.back_buffer = surface.back_buffer()?;
+        graphics.back_buffer = surface.context.back_buffer()?;
     }
     Ok(true)
 }
