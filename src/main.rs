@@ -1,6 +1,7 @@
 #![warn(rust_2018_idioms)]
 
 use std::{
+    fmt::{self, Display, Formatter},
     mem::MaybeUninit,
     path::PathBuf,
     process,
@@ -13,7 +14,7 @@ use std::{
 
 use log::info;
 
-use glfw::{Action, Context, Key, WindowEvent};
+use glfw::{Action, Context, Key, SwapInterval, WindowEvent, WindowMode};
 use luminance_derive::UniformInterface;
 use luminance_front::{
     context::GraphicsContext,
@@ -23,10 +24,9 @@ use luminance_front::{
     render_state::RenderState,
     shader::{BuiltProgram, Program, Uniform},
     tess::{Mode, Tess},
-    texture::{Dim2, GenMipmaps, Sampler, Texture},
+    texture::{Dim2, Sampler, TexelUpload, Texture},
 };
-use luminance_glfw::{GL33Context, GlfwSurface};
-use luminance_windowing::{WindowDim, WindowOpt};
+use luminance_glfw::{GL33Context, GlfwSurface, GlfwSurfaceError};
 
 use spin_sleep::LoopHelper;
 
@@ -34,6 +34,26 @@ use structopt::StructOpt;
 
 use space_invaders::{Port1, Port2, SpaceInvaders};
 
+#[derive(Debug)]
+pub enum Error {
+    CannotCreateError,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::CannotCreateError => write!(f, "Cannot create a window"),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::CannotCreateError => None,
+        }
+    }
+}
 #[derive(Debug, StructOpt)]
 #[structopt(about)]
 struct Opt {
@@ -95,13 +115,20 @@ fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
     thread::spawn(update_space_invaders(Arc::clone(&space_invaders)));
     thread::spawn(generate_interrupts(interrupt_sender));
 
-    let mut surface = GlfwSurface::new_gl33(
-        "Space Invaders",
-        WindowOpt::default().set_dim(WindowDim::Windowed {
-            width: space_invaders::SCREEN_WIDTH * 2,
-            height: space_invaders::SCREEN_HEIGHT * 2,
-        }),
-    )?;
+    let mut surface = GlfwSurface::new(|glfw| {
+        let (mut window, events) = glfw
+            .create_window(
+                space_invaders::SCREEN_WIDTH * 2,
+                space_invaders::SCREEN_HEIGHT * 2,
+                "Space Invaders",
+                WindowMode::Windowed,
+            )
+            .ok_or(GlfwSurfaceError::UserError(Error::CannotCreateError))?;
+        window.make_current();
+        window.set_all_polling(true);
+        glfw.set_swap_interval(SwapInterval::Sync(1));
+        Ok((window, events))
+    })?;
     let mut graphics = Graphics::new(&mut surface.context)?;
 
     let mut loop_helper = LoopHelper::builder().build_with_target_rate(60.0);
@@ -162,7 +189,7 @@ struct Graphics {
 impl Graphics {
     fn new(context: &mut GL33Context) -> Result<Self, Box<dyn std::error::Error>> {
         let back_buffer = context.back_buffer()?;
-        let pipeline_state = PipelineState::default().enable_clear_depth(false);
+        let pipeline_state = PipelineState::default().set_clear_depth(None);
         let BuiltProgram { program, warnings } =
             context.new_shader_program::<(), (), Uniforms>().from_strings(
                 VERTEX_SHADER,
@@ -174,12 +201,12 @@ impl Graphics {
         let render_state = RenderState::default().set_depth_test(None);
         let vertices =
             context.new_tess().set_render_vertex_nb(4).set_mode(Mode::TriangleFan).build()?;
-        let texture = context.new_texture_no_texels(
-            [space_invaders::SCREEN_HEIGHT, space_invaders::SCREEN_WIDTH],
-            0, // mipmaps
-            Sampler::default(),
-        )?;
         let texels = [0; TEXELS_LEN];
+        let texture = context.new_texture(
+            [space_invaders::SCREEN_HEIGHT, space_invaders::SCREEN_WIDTH],
+            Sampler::default(),
+            TexelUpload::base_level_without_mipmaps(&texels),
+        )?;
         Ok(Self { back_buffer, pipeline_state, program, render_state, vertices, texture, texels })
     }
 
@@ -207,7 +234,7 @@ impl Graphics {
             framebuffer.assume_init()
         };
         framebuffer_to_texels(&framebuffer, texels);
-        texture.upload_raw(GenMipmaps::No, texels)?;
+        texture.upload(TexelUpload::base_level_without_mipmaps(texels))?;
         context
             .new_pipeline_gate()
             .pipeline(back_buffer, pipeline_state, |pipeline, mut shading_gate| {
