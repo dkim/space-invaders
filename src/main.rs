@@ -201,12 +201,12 @@ impl Graphics {
         let render_state = RenderState::default().set_depth_test(None);
         let vertices =
             context.new_tess().set_render_vertex_nb(4).set_mode(Mode::TriangleFan).build()?;
-        let texels = [0; TEXELS_LEN];
         let texture = context.new_texture(
             [space_invaders::SCREEN_HEIGHT, space_invaders::SCREEN_WIDTH],
             Sampler::default(),
-            TexelUpload::base_level_without_mipmaps(&texels),
+            TexelUpload::reserve(0),
         )?;
+        let texels = [0; TEXELS_LEN];
         Ok(Self { back_buffer, pipeline_state, program, render_state, vertices, texture, texels })
     }
 
@@ -234,7 +234,7 @@ impl Graphics {
             framebuffer.assume_init()
         };
         framebuffer_to_texels(&framebuffer, texels);
-        texture.upload(TexelUpload::base_level_without_mipmaps(texels))?;
+        texture.upload(TexelUpload::base_level(texels, 0))?;
         context
             .new_pipeline_gate()
             .pipeline(back_buffer, pipeline_state, |pipeline, mut shading_gate| {
