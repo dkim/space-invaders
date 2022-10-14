@@ -272,6 +272,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "glfw"
+version = "0.44.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "103c29fa9d30c5371187895a10948d4f54b4111450328b4e439133d88243c5e3"
+dependencies = [
+ "bitflags",
+ "glfw-sys",
+ "objc",
+ "raw-window-handle",
+ "winapi",
+]
+
+[[package]]
 name = "glfw-sys"
 version = "3.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -426,7 +439,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa0a42da8bf426d190c3556a67ad35b6eb920b6291cc9fb46e46e5ee2f79c258"
 dependencies = [
  "gl",
- "glfw",
+ "glfw 0.43.0",
  "luminance",
  "luminance-gl",
 ]
@@ -652,7 +665,7 @@ version = "1.1.0"
 dependencies = [
  "bitflags",
  "env_logger",
- "glfw",
+ "glfw 0.44.0",
  "i8080",
  "log",
  "luminance",
