@@ -11,7 +11,7 @@ arcade machine.
 
 ## Installation Requirements
 
-This program targets the latest stable version of Rust 1.45.2 or later.
+This program targets the latest stable version of Rust 1.56.1 or later.
 
 ### Requirements for Linux Systems
 
