@@ -81,7 +81,7 @@ const TEXELS_LEN: usize =
 
 fn main() {
     if let Err(err) = run(Opt::from_args()) {
-        eprintln!("Error: {}", err);
+        eprintln!("Error: {err}");
         process::exit(1);
     }
 }
@@ -197,7 +197,7 @@ impl Graphics {
                 None, // geometry shader
                 FRAGMENT_SHADER,
             )?;
-        assert!(warnings.is_empty(), "{:?}", warnings);
+        assert!(warnings.is_empty(), "{warnings:?}");
         let render_state = RenderState::default().set_depth_test(None);
         let vertices =
             context.new_tess().set_render_vertex_nb(4).set_mode(Mode::TriangleFan).build()?;
