@@ -1,6 +1,6 @@
 # space-invaders
 
-[![Build Status](https://github.com/dkim/space-invaders/workflows/build/badge.svg)](https://github.com/dkim/space-invaders/actions?query=workflow%3Abuild+branch%3Amaster)
+[![Build Status](https://github.com/dkim/space-invaders/workflows/build/badge.svg)](https://github.com/dkim/space-invaders/actions?query=workflow%3Abuild+branch%3Amain)
 
 space-invaders is an OpenGL-based emulator in Rust for the [Space Invaders]
 arcade machine.
