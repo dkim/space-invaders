@@ -15,7 +15,7 @@ bitflags = "1.2.1"
 env_logger = "0.8.3"
 glfw = "0.43.0"
 i8080 = { git = "https://github.com/dkim/i8080", tag = "1.0.2" }
-log = "0.4.14"
+log = "0.4"
 luminance = "=0.46.0"
 luminance-derive = "0.9.0"
 luminance-front = { version = "=0.6.0", default-features = false, features = ["gl33"] }
