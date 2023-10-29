@@ -12,6 +12,7 @@ edition = "2021"
 
 [dependencies]
 bitflags = "1.2.1"
+clap = { version = "4.4.7", features = ["derive"] }
 env_logger = "0.8.3"
 glfw = "0.43.0"
 i8080 = { git = "https://github.com/dkim/i8080", tag = "1.0.2" }
@@ -24,4 +25,3 @@ luminance-glfw = "=0.18.0"
 luminance-std140 = "=0.2.0"
 rodio = { version = "0.17.3", default-features = false, features = ["wav"] }
 spin_sleep = "1.0.0"
-structopt = { version = "0.3.21", features = ["wrap_help"] }

@@ -12,6 +12,8 @@ use std::{
     thread,
 };
 
+use clap::Parser;
+
 use env_logger::Env;
 
 use log::info;
@@ -33,8 +35,6 @@ use luminance_glfw::{GL33Context, GlfwSurface, GlfwSurfaceError};
 use rodio::{OutputStream, StreamError};
 
 use spin_sleep::LoopHelper;
-
-use structopt::StructOpt;
 
 use space_invaders::{Port1, Port2, Samples, SpaceInvaders};
 
@@ -58,15 +58,13 @@ impl std::error::Error for Error {
         }
     }
 }
-#[derive(Debug, StructOpt)]
-#[structopt(about)]
+#[derive(Debug, Parser)]
+#[command(about)]
 struct Opt {
     /// A directory that contains invaders.{e,f,g,h}
-    #[structopt(parse(from_os_str))]
     roms: PathBuf,
 
     /// A directory that contains {0..8}.wav
-    #[structopt(parse(from_os_str))]
     samples: Option<PathBuf>,
 }
 
@@ -84,7 +82,7 @@ const TEXELS_LEN: usize =
     space_invaders::SCREEN_HEIGHT as usize * space_invaders::SCREEN_WIDTH as usize;
 
 fn main() {
-    if let Err(err) = run(Opt::from_args()) {
+    if let Err(err) = run(Opt::parse()) {
         eprintln!("Error: {err}");
         process::exit(1);
     }

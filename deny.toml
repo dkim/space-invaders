@@ -17,13 +17,21 @@ skip = [
     { name = "raw-window-handle", version = "0.4.3" },
     { name = "syn", version = "1.0.109" },
     { name = "windows-targets", version = "0.42.2" },
+    { name = "windows-targets", version = "0.48.5" },
     { name = "windows_aarch64_gnullvm", version = "0.42.2" },
+    { name = "windows_aarch64_gnullvm", version = "0.48.5" },
     { name = "windows_aarch64_msvc", version = "0.42.2" },
+    { name = "windows_aarch64_msvc", version = "0.48.5" },
     { name = "windows_i686_gnu", version = "0.42.2" },
+    { name = "windows_i686_gnu", version = "0.48.5" },
     { name = "windows_i686_msvc", version = "0.42.2" },
+    { name = "windows_i686_msvc", version = "0.48.5" },
     { name = "windows_x86_64_gnu", version = "0.42.2" },
+    { name = "windows_x86_64_gnu", version = "0.48.5" },
     { name = "windows_x86_64_gnullvm", version = "0.42.2" },
+    { name = "windows_x86_64_gnullvm", version = "0.48.5" },
     { name = "windows_x86_64_msvc", version = "0.42.2" },
+    { name = "windows_x86_64_msvc", version = "0.48.5" },
 ]
 
 [sources]
