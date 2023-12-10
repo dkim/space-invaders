@@ -30,6 +30,8 @@ use luminance_front::{
 };
 use luminance_glfw::{GL33Context, GlfwSurface, GlfwSurfaceError};
 
+use rodio::{OutputStream, StreamError};
+
 use spin_sleep::LoopHelper;
 
 use structopt::StructOpt;
@@ -91,6 +93,11 @@ fn main() {
 fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
+    let (_audio_stream, audio_stream_handle) = match OutputStream::try_default() {
+        Ok((stream, stream_handle)) => (Some(stream), Some(stream_handle)),
+        Err(StreamError::NoDevice) => (None, None),
+        Err(err) => return Err(Box::new(err)),
+    };
     let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
     let space_invaders = Arc::new(Mutex::new(SpaceInvaders::new(
         &[
@@ -112,6 +119,7 @@ fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
                 samples.join("8.wav"),
             ]
         }),
+        audio_stream_handle.as_ref(),
         interrupt_receiver,
     )?));
     thread::spawn(update_space_invaders(Arc::clone(&space_invaders)));

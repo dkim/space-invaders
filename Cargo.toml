@@ -22,6 +22,6 @@ luminance-front = { version = "=0.6.0", default-features = false, features = ["g
 luminance-gl = "=0.19.0"
 luminance-glfw = "=0.18.0"
 luminance-std140 = "=0.2.0"
-rodio = { version = "0.11.0", default-features = false, features = ["wav"] }
+rodio = { version = "0.17.3", default-features = false, features = ["wav"] }
 spin_sleep = "1.0.0"
 structopt = { version = "0.3.21", features = ["wrap_help"] }
