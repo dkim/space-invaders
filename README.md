@@ -100,7 +100,7 @@ ARGS:
     <roms>       A directory that contains invaders.{e,f,g,h}
     <samples>    A directory that contains {0..8}.wav
 
-$ RUST_LOG=info cargo run --release -- /path/to/roms /path/to/samples
+$ cargo run --release -- /path/to/roms /path/to/samples
 ```
 
 ### Controls

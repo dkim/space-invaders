@@ -12,6 +12,8 @@ use std::{
     thread,
 };
 
+use env_logger::Env;
+
 use log::info;
 
 use glfw::{Action, Context, Key, SwapInterval, WindowEvent, WindowMode};
@@ -87,7 +89,7 @@ fn main() {
 }
 
 fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
     let space_invaders = Arc::new(Mutex::new(SpaceInvaders::new(
