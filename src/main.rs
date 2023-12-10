@@ -30,11 +30,13 @@ use luminance_front::{
 };
 use luminance_glfw::{GL33Context, GlfwSurface, GlfwSurfaceError};
 
+use rodio::{OutputStream, StreamError};
+
 use spin_sleep::LoopHelper;
 
 use structopt::StructOpt;
 
-use space_invaders::{Port1, Port2, SpaceInvaders};
+use space_invaders::{Port1, Port2, Samples, SpaceInvaders};
 
 #[derive(Debug)]
 pub enum Error {
@@ -91,14 +93,13 @@ fn main() {
 fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
-    let space_invaders = Arc::new(Mutex::new(SpaceInvaders::new(
-        &[
-            opt.roms.join("invaders.h"),
-            opt.roms.join("invaders.g"),
-            opt.roms.join("invaders.f"),
-            opt.roms.join("invaders.e"),
-        ],
+    let (_audio_stream, audio_stream_handle) = match OutputStream::try_default() {
+        Ok((stream, stream_handle)) => (Some(stream), Some(stream_handle)),
+        Err(StreamError::NoDevice) => (None, None),
+        Err(err) => return Err(Box::new(err)),
+    };
+    let samples = Samples::new(
+        audio_stream_handle.as_ref(),
         opt.samples.map(|samples| {
             [
                 samples.join("0.wav"),
@@ -112,6 +113,16 @@ fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
                 samples.join("8.wav"),
             ]
         }),
+    );
+    let (interrupt_sender, interrupt_receiver) = mpsc::sync_channel(0);
+    let space_invaders = Arc::new(Mutex::new(SpaceInvaders::new(
+        &[
+            opt.roms.join("invaders.h"),
+            opt.roms.join("invaders.g"),
+            opt.roms.join("invaders.f"),
+            opt.roms.join("invaders.e"),
+        ],
+        samples,
         interrupt_receiver,
     )?));
     thread::spawn(update_space_invaders(Arc::clone(&space_invaders)));
