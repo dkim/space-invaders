@@ -10,6 +10,7 @@ use std::{
         Arc, Mutex,
     },
     thread,
+    time::{Duration, Instant},
 };
 
 use env_logger::Env;
@@ -31,8 +32,6 @@ use luminance_front::{
 use luminance_glfw::{GL33Context, GlfwSurface, GlfwSurfaceError};
 
 use rodio::{OutputStream, StreamError};
-
-use spin_sleep::LoopHelper;
 
 use structopt::StructOpt;
 
@@ -141,47 +140,46 @@ fn run(opt: Opt) -> Result<(), Box<dyn std::error::Error>> {
     })?;
     let mut graphics = Graphics::new(&mut surface.context)?;
 
-    let mut loop_helper = LoopHelper::builder().build_with_target_rate(60.0);
+    let mut interval = spin_sleep_util::interval(Duration::from_secs(1) / 60);
     loop {
-        loop_helper.loop_start();
+        interval.tick();
         if !(process_input(&mut surface, &mut graphics, &space_invaders)?) {
             break;
         }
         graphics.render(&space_invaders, &mut surface.context)?;
-        loop_helper.loop_sleep();
     }
     Ok(())
 }
 
 fn update_space_invaders(space_invaders: Arc<Mutex<SpaceInvaders>>) -> impl FnOnce() {
     move || {
-        let mut loop_helper = LoopHelper::builder().build_with_target_rate(120.0);
+        let mut interval = spin_sleep_util::interval(Duration::from_secs(1) / 120);
+        let mut timer = Instant::now();
         loop {
+            interval.tick();
             // 2 MHz = 2,000,000 states per second = 2 states per microsecond
-            let elapsed_states = loop_helper.loop_start().as_micros() * 2;
+            let elapsed_states = timer.elapsed().as_micros() * 2;
+            timer = Instant::now();
             let mut states = 0;
             while elapsed_states > states {
                 states += u128::from(space_invaders.lock().unwrap().update());
             }
-            loop_helper.loop_sleep();
         }
     }
 }
 
 fn generate_interrupts(interrupt_sender: SyncSender<[u8; 3]>) -> impl FnOnce() {
     move || {
-        let mut loop_helper = LoopHelper::builder().build_with_target_rate(120.0);
+        let mut interval = spin_sleep_util::interval(Duration::from_secs(1) / 120);
         loop {
-            loop_helper.loop_start();
+            interval.tick();
             if interrupt_sender.send([0xCF, 0, 0] /* RST 1 */).is_err() {
                 break;
             }
-            loop_helper.loop_sleep();
-            loop_helper.loop_start();
+            interval.tick();
             if interrupt_sender.send([0xD7, 0, 0] /* RST 2 */).is_err() {
                 break;
             }
-            loop_helper.loop_sleep();
         }
     }
 }
