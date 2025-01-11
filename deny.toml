@@ -5,7 +5,7 @@ allow = [
   "BSD-3-Clause",
   "ISC",
   "MIT",
-  "Unicode-DFS-2016",
+  "Unicode-3.0",
   "Zlib",
 ]
 
@@ -16,6 +16,7 @@ skip = [
     { name = "jni", version = "0.19.0" },
     { name = "raw-window-handle", version = "0.4.3" },
     { name = "syn", version = "1.0.109" },
+    { name = "windows-sys", version = "0.52.0" },
     { name = "windows-targets", version = "0.42.2" },
     { name = "windows-targets", version = "0.48.5" },
     { name = "windows_aarch64_gnullvm", version = "0.42.2" },
